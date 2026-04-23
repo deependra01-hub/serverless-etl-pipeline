@@ -1,0 +1,31 @@
+{
+  "title": "Realtime E-commerce ETL",
+  "schemaVersion": 39,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Producer Throughput",
+      "targets": [{ "expr": "sum(rate(producer_events_total[1m])) by (topic)" }],
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Producer Error Rate",
+      "targets": [{ "expr": "sum(rate(producer_errors_total[5m])) by (topic)" }],
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Spark Processing Delay",
+      "targets": [{ "expr": "avg(spark_streaming_lastCompletedBatch_processingDelay_value)" }],
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 }
+    },
+    {
+      "type": "logs",
+      "title": "Centralized Logs",
+      "targets": [{ "expr": "{namespace=\"streaming\"}" }],
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 }
+    }
+  ]
+}
+

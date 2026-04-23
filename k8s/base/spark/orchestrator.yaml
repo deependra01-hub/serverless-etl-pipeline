@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-pipeline-orchestrator
+  namespace: streaming
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spark-pipeline-orchestrator
+  template:
+    metadata:
+      labels:
+        app: spark-pipeline-orchestrator
+    spec:
+      serviceAccountName: pipeline-orchestrator
+      containers:
+        - name: orchestrator
+          image: ghcr.io/example/realtime-ecommerce-etl/orchestrator:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: ecommerce-kafka-kafka-bootstrap.streaming.svc.cluster.local:9092
+            - name: KAFKA_SECURITY_PROTOCOL
+              value: SASL_PLAINTEXT
+            - name: KAFKA_SASL_MECHANISM
+              value: SCRAM-SHA-512
+            - name: KAFKA_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: kafka-client-auth
+                  key: username
+            - name: KAFKA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: streaming-app
+                  key: password
+            - name: SPARK_NAMESPACE
+              value: streaming
+            - name: BRONZE_APP_NAME
+              value: bronze-streaming
+            - name: SILVER_APP_NAME
+              value: silver-gold-streaming
+            - name: IDLE_CYCLES_BEFORE_SUSPEND
+              value: "20"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: 128Mi
+            limits:
+              cpu: "500m"
+              memory: 256Mi

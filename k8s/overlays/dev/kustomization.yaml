@@ -1,0 +1,26 @@
+resources:
+  - ../../base
+
+patches:
+  - target:
+      kind: Deployment
+      name: clickstream-producer
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+  - target:
+      kind: SparkApplication
+      name: bronze-streaming
+    patch: |-
+      - op: replace
+        path: /spec/dynamicAllocation/maxExecutors
+        value: 4
+  - target:
+      kind: SparkApplication
+      name: silver-gold-streaming
+    patch: |-
+      - op: replace
+        path: /spec/dynamicAllocation/maxExecutors
+        value: 6
+

@@ -1,0 +1,20 @@
+resources:
+  - namespace.yaml
+  - rbac/serviceaccounts.yaml
+  - rbac/rbac.yaml
+  - storage/minio.yaml
+  - storage/minio-bootstrap-job.yaml
+  - kafka/kafka-cluster.yaml
+  - kafka/kafka-topics.yaml
+  - kafka/schema-registry.yaml
+  - spark/spark-metrics-config.yaml
+  - spark/producer.yaml
+  - spark/orchestrator.yaml
+  - spark/orchestrator-scaledobject.yaml
+  - spark/bronze-streaming.yaml
+  - spark/silver-gold-streaming.yaml
+  - dashboard/dashboard.yaml
+  - monitoring/prometheus.yaml
+  - monitoring/grafana.yaml
+  - monitoring/loki-fluentbit.yaml
+

@@ -1,0 +1,46 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: sparkapplication-manager
+  namespace: streaming
+rules:
+  - apiGroups: ["sparkoperator.k8s.io"]
+    resources: ["sparkapplications"]
+    verbs: ["get", "list", "watch", "patch", "create", "delete"]
+  - apiGroups: [""]
+    resources: ["pods", "services", "configmaps", "secrets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sparkapplication-manager-binding
+  namespace: streaming
+subjects:
+  - kind: ServiceAccount
+    name: pipeline-orchestrator
+    namespace: streaming
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: sparkapplication-manager
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: object-store-credentials
+  namespace: streaming
+type: Opaque
+stringData:
+  accessKey: minio
+  secretKey: minio123
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kafka-client-auth
+  namespace: streaming
+type: Opaque
+stringData:
+  username: streaming-app
+  sasl: scram_sha512

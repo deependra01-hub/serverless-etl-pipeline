@@ -1,0 +1,39 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: spark-pipeline-orchestrator
+  namespace: streaming
+spec:
+  scaleTargetRef:
+    name: spark-pipeline-orchestrator
+  pollingInterval: 15
+  cooldownPeriod: 120
+  minReplicaCount: 1
+  maxReplicaCount: 1
+  triggers:
+    - type: kafka
+      metadata:
+        bootstrapServers: ecommerce-kafka-kafka-bootstrap.streaming.svc.cluster.local:9092
+        topic: ecommerce.clickstream.v1
+        consumerGroup: spark-orchestrator-monitor
+        lagThreshold: "5"
+        offsetResetPolicy: latest
+      authenticationRef:
+        name: kafka-trigger-auth
+---
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: kafka-trigger-auth
+  namespace: streaming
+spec:
+  secretTargetRef:
+    - parameter: sasl
+      name: kafka-client-auth
+      key: sasl
+    - parameter: username
+      name: kafka-client-auth
+      key: username
+    - parameter: password
+      name: streaming-app
+      key: password

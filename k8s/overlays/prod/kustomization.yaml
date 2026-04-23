@@ -1,0 +1,18 @@
+resources:
+  - ../../base
+
+patches:
+  - target:
+      kind: Deployment
+      name: clickstream-producer
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 4
+  - target:
+      kind: Deployment
+      name: analytics-dashboard
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 3

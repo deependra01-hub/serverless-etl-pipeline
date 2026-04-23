@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: schema-registry
+  namespace: streaming
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: schema-registry
+  template:
+    metadata:
+      labels:
+        app: schema-registry
+    spec:
+      containers:
+        - name: schema-registry
+          image: confluentinc/cp-schema-registry:7.7.1
+          command:
+            - /bin/sh
+            - -c
+          args:
+            - |
+              export SCHEMA_REGISTRY_KAFKASTORE_SASL_JAAS_CONFIG="org.apache.kafka.common.security.scram.ScramLoginModule required username=\"${KAFKA_USERNAME}\" password=\"${KAFKA_PASSWORD}\";";
+              /etc/confluent/docker/run
+          ports:
+            - containerPort: 8081
+          env:
+            - name: SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS
+              value: SASL_PLAINTEXT://ecommerce-kafka-kafka-bootstrap:9092
+            - name: SCHEMA_REGISTRY_KAFKASTORE_SECURITY_PROTOCOL
+              value: SASL_PLAINTEXT
+            - name: SCHEMA_REGISTRY_KAFKASTORE_SASL_MECHANISM
+              value: SCRAM-SHA-512
+            - name: KAFKA_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: kafka-client-auth
+                  key: username
+            - name: KAFKA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: streaming-app
+                  key: password
+            - name: SCHEMA_REGISTRY_LISTENERS
+              value: http://0.0.0.0:8081
+            - name: SCHEMA_REGISTRY_HOST_NAME
+              value: schema-registry
+          resources:
+            requests:
+              cpu: "250m"
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: schema-registry
+  namespace: streaming
+spec:
+  selector:
+    app: schema-registry
+  ports:
+    - port: 8081
+      targetPort: 8081

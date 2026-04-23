@@ -1,0 +1,91 @@
+apiVersion: sparkoperator.k8s.io/v1beta2
+kind: SparkApplication
+metadata:
+  name: silver-gold-streaming
+  namespace: streaming
+spec:
+  type: Python
+  mode: cluster
+  image: ghcr.io/example/realtime-ecommerce-etl/spark:latest
+  imagePullPolicy: IfNotPresent
+  mainApplicationFile: local:///opt/spark/app/spark/jobs/silver_gold_pipeline.py
+  sparkVersion: "3.5.1"
+  restartPolicy:
+    type: OnFailure
+    onFailureRetries: 5
+    onFailureRetryInterval: 30
+  timeToLiveSeconds: 86400
+  pythonVersion: "3"
+  dynamicAllocation:
+    enabled: true
+    initialExecutors: 2
+    minExecutors: 2
+    maxExecutors: 16
+  sparkConf:
+    spark.kubernetes.authenticate.driver.serviceAccountName: spark-runtime
+    spark.metrics.conf: /opt/spark/conf/metrics.properties
+    spark.sql.extensions: io.delta.sql.DeltaSparkSessionExtension
+    spark.sql.catalog.spark_catalog: org.apache.spark.sql.delta.catalog.DeltaCatalog
+    spark.kubernetes.executor.request.cores: "1"
+    spark.kubernetes.executor.limit.cores: "2"
+    spark.streaming.backpressure.enabled: "true"
+  deps:
+    packages:
+      - org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1
+      - io.delta:delta-spark_2.12:3.2.0
+      - org.apache.hadoop:hadoop-aws:3.3.4
+      - software.amazon.awssdk:bundle:2.24.6
+  volumes:
+    - name: spark-metrics
+      configMap:
+        name: spark-metrics
+  driver:
+    serviceAccount: spark-runtime
+    cores: 1
+    memory: 3g
+    env:
+      - name: SPARK_APP_NAME
+        value: silver-gold-streaming
+      - name: S3_ENDPOINT
+        value: http://minio.streaming.svc.cluster.local:9000
+      - name: S3_ACCESS_KEY
+        valueFrom:
+          secretKeyRef:
+            name: object-store-credentials
+            key: accessKey
+      - name: S3_SECRET_KEY
+        valueFrom:
+          secretKeyRef:
+            name: object-store-credentials
+            key: secretKey
+    volumeMounts:
+      - name: spark-metrics
+        mountPath: /opt/spark/conf
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "4040"
+      prometheus.io/path: /metrics/prometheus
+  executor:
+    instances: 2
+    cores: 1
+    memory: 3g
+    env:
+      - name: S3_ENDPOINT
+        value: http://minio.streaming.svc.cluster.local:9000
+      - name: S3_ACCESS_KEY
+        valueFrom:
+          secretKeyRef:
+            name: object-store-credentials
+            key: accessKey
+      - name: S3_SECRET_KEY
+        valueFrom:
+          secretKeyRef:
+            name: object-store-credentials
+            key: secretKey
+    volumeMounts:
+      - name: spark-metrics
+        mountPath: /opt/spark/conf
+  monitoring:
+    exposeDriverMetrics: true
+    exposeExecutorMetrics: true
+  suspend: false

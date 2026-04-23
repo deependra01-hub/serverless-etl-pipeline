@@ -1,0 +1,60 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: bootstrap-minio-buckets
+  namespace: streaming
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: bootstrap
+          image: python:3.10-slim
+          command:
+            - sh
+            - -c
+            - pip install --no-cache-dir boto3==1.35.0 && python /scripts/bootstrap_minio_buckets.py
+          env:
+            - name: S3_ENDPOINT
+              value: http://minio.streaming.svc.cluster.local:9000
+            - name: S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: object-store-credentials
+                  key: accessKey
+            - name: S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: object-store-credentials
+                  key: secretKey
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+      volumes:
+        - name: scripts
+          configMap:
+            name: bootstrap-scripts
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bootstrap-scripts
+  namespace: streaming
+data:
+  bootstrap_minio_buckets.py: |
+    from __future__ import annotations
+    import os
+    import boto3
+    endpoint = os.getenv("S3_ENDPOINT")
+    access_key = os.getenv("S3_ACCESS_KEY")
+    secret_key = os.getenv("S3_SECRET_KEY")
+    client = boto3.client(
+        "s3",
+        endpoint_url=endpoint,
+        aws_access_key_id=access_key,
+        aws_secret_access_key=secret_key,
+    )
+    for bucket_name in ("raw-clickstream", "curated-clickstream"):
+        names = [bucket["Name"] for bucket in client.list_buckets()["Buckets"]]
+        if bucket_name not in names:
+            client.create_bucket(Bucket=bucket_name)

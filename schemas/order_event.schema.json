@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "OrderEvent",
+  "type": "object",
+  "required": [
+    "order_id",
+    "event_time",
+    "session_id",
+    "user_id",
+    "status",
+    "payment_method",
+    "currency",
+    "order_value",
+    "schema_version"
+  ],
+  "properties": {
+    "order_id": { "type": "string", "minLength": 10 },
+    "event_time": { "type": "string", "format": "date-time" },
+    "session_id": { "type": "string", "minLength": 8 },
+    "user_id": { "type": "string", "minLength": 8 },
+    "status": { "type": "string", "enum": ["authorized", "captured", "declined", "refunded"] },
+    "payment_method": { "type": "string", "enum": ["card", "wallet", "upi", "paypal"] },
+    "currency": { "type": "string", "minLength": 3, "maxLength": 3 },
+    "order_value": { "type": "number", "minimum": 0 },
+    "items_count": { "type": "integer", "minimum": 1 },
+    "fraud_score": { "type": "number", "minimum": 0, "maximum": 1 },
+    "shipping_country": { "type": ["string", "null"], "minLength": 2, "maxLength": 2 },
+    "schema_version": { "type": "integer", "minimum": 1 }
+  }
+}

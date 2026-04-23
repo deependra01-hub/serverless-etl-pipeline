@@ -1,0 +1,130 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: streaming
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus:9090
+        isDefault: true
+      - name: Loki
+        type: loki
+        access: proxy
+        url: http://loki:3100
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-provider
+  namespace: streaming
+data:
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+      - name: ecommerce
+        orgId: 1
+        folder: E-commerce ETL
+        type: file
+        options:
+          path: /var/lib/grafana/dashboards
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ecommerce-dashboard-json
+  namespace: streaming
+data:
+  ecommerce-pipeline.json: |
+    {
+      "title": "Realtime E-commerce ETL",
+      "schemaVersion": 39,
+      "panels": [
+        {
+          "type": "timeseries",
+          "title": "Producer Throughput",
+          "targets": [{ "expr": "sum(rate(producer_events_total[1m])) by (topic)" }],
+          "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 }
+        },
+        {
+          "type": "timeseries",
+          "title": "Producer Error Rate",
+          "targets": [{ "expr": "sum(rate(producer_errors_total[5m])) by (topic)" }],
+          "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 }
+        },
+        {
+          "type": "timeseries",
+          "title": "Spark Batch Duration",
+          "targets": [{ "expr": "avg(spark_streaming_lastCompletedBatch_processingDelay_value)" }],
+          "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 }
+        },
+        {
+          "type": "timeseries",
+          "title": "Executor CPU",
+          "targets": [{ "expr": "avg(rate(container_cpu_usage_seconds_total{namespace='streaming'}[5m])) by (pod)" }],
+          "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 }
+        }
+      ]
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: streaming
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+        - name: grafana
+          image: grafana/grafana:11.2.0
+          ports:
+            - containerPort: 3000
+          volumeMounts:
+            - name: datasources
+              mountPath: /etc/grafana/provisioning/datasources
+            - name: providers
+              mountPath: /etc/grafana/provisioning/dashboards
+            - name: dashboards
+              mountPath: /var/lib/grafana/dashboards
+          resources:
+            requests:
+              cpu: "250m"
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+      volumes:
+        - name: datasources
+          configMap:
+            name: grafana-datasources
+        - name: providers
+          configMap:
+            name: grafana-dashboard-provider
+        - name: dashboards
+          configMap:
+            name: ecommerce-dashboard-json
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: streaming
+spec:
+  selector:
+    app: grafana
+  ports:
+    - port: 3000
+      targetPort: 3000
+

@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clickstream-producer
+  namespace: streaming
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: clickstream-producer
+  template:
+    metadata:
+      labels:
+        app: clickstream-producer
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9108"
+    spec:
+      serviceAccountName: producer
+      containers:
+        - name: producer
+          image: ghcr.io/example/realtime-ecommerce-etl/producer:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: ecommerce-kafka-kafka-bootstrap.streaming.svc.cluster.local:9092
+            - name: KAFKA_SECURITY_PROTOCOL
+              value: SASL_PLAINTEXT
+            - name: KAFKA_SASL_MECHANISM
+              value: SCRAM-SHA-512
+            - name: KAFKA_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: kafka-client-auth
+                  key: username
+            - name: KAFKA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: streaming-app
+                  key: password
+            - name: CLICKSTREAM_TOPIC
+              value: ecommerce.clickstream.v1
+            - name: ORDERS_TOPIC
+              value: ecommerce.orders.v1
+            - name: TARGET_EVENTS_PER_MINUTE
+              value: "120000"
+            - name: PRODUCER_BATCH_SIZE
+              value: "2000"
+          resources:
+            requests:
+              cpu: "500m"
+              memory: 512Mi
+            limits:
+              cpu: "4"
+              memory: 2Gi
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: clickstream-producer
+  namespace: streaming
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: clickstream-producer
+  minReplicas: 2
+  maxReplicas: 12
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

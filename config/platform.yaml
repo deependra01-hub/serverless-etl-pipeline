@@ -1,0 +1,60 @@
+project:
+  name: realtime-ecommerce-etl
+  domain: ecommerce-clickstream-analytics
+  owner: data-platform
+  environment: production
+
+kafka:
+  bootstrap_servers: ecommerce-kafka-kafka-bootstrap.streaming.svc.cluster.local:9092
+  schema_registry_url: http://schema-registry.streaming.svc.cluster.local:8081
+  security_protocol: SASL_PLAINTEXT
+  sasl_mechanism: SCRAM-SHA-512
+  clickstream_topic: ecommerce.clickstream.v1
+  orders_topic: ecommerce.orders.v1
+  clickstream_partitions: 24
+  orders_partitions: 12
+
+storage:
+  raw_bucket: raw-clickstream
+  curated_bucket: curated-clickstream
+  bronze_prefix: bronze
+  silver_prefix: silver
+  gold_prefix: gold
+  checkpoint_prefix: checkpoints
+  quarantine_prefix: quarantine
+  endpoint_url: http://minio.streaming.svc.cluster.local:9000
+  access_key_secret_name: object-store-credentials
+
+spark:
+  app_name_prefix: ecommerce-analytics
+  trigger_interval: 5 seconds
+  checkpoint_retention_days: 7
+  shuffle_partitions: 96
+  state_store_min_deltas_for_snapshot: 10
+  late_arrival_threshold: 20 minutes
+  join_lookback: 45 minutes
+  metrics_namespace: ecommerce_pipeline
+
+producer:
+  target_events_per_minute: 120000
+  burst_factor: 1.3
+  users: 500000
+  sessions_per_minute: 6000
+  skew_campaign_ratio: 0.25
+
+quality:
+  max_null_ratio: 0.02
+  max_duplicate_ratio: 0.005
+  max_unknown_event_type_ratio: 0.001
+  expected_channel_distribution:
+    organic: 0.28
+    paid_search: 0.24
+    social: 0.16
+    email: 0.14
+    affiliate: 0.10
+    direct: 0.08
+
+dashboard:
+  refresh_seconds: 10
+  gold_kpi_table: s3a://curated-clickstream/gold/realtime_kpis
+  quality_table: s3a://curated-clickstream/gold/quality_alerts
